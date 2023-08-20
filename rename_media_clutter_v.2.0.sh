@@ -1,30 +1,92 @@
 #!/bin/bash
 
 ################################################################################
-# Title: rename_media_clutter_v.1.0.sh
-# Version: 1.0
+# Title: rename_media_clutter_v.2.0.sh
+# Version: 2.0
 # Description: This script renames media files in a directory based on their
 #   creation date and time, and adds prefixes "P_" for pictures and "V_" for
-#   audio/video files.
+#   audio/video files. It can also move files to a destination folder.
+#
+# Parameters: -s source_folder [-d destination_folder]
 #
 # Developer: Tushar Sharma
-# Last Updated: 15-AUG-2023
+# Last Updated: 16-AUG-2023
 #
 # Change Notes: 
-# - initial version to rename media files in a given directory
+# - added source and destination directories as input parameters
+# - included headers on main log
 ################################################################################
 
-# Get source directory from command line argument or prompt the user
-if [ $# -eq 1 ]; then
-    source_dir="$1"
-else
-    read -p "Enter the source directory: " source_dir
+# Default values
+source_dir=""
+destination_dir=""
+move_files=false
+
+# Function to print script usage
+print_usage() {
+    echo "Usage: $0 -s source_folder [-d destination_folder]"
+    echo "Options:"
+    echo "  -s   Specify the source folder containing media files."
+    echo "  -d   Specify a destination folder to move renamed files."
+}
+
+# Function to prompt user to create a directory
+prompt_create_directory() {
+    local dir="$1"
+    read -p "The directory '$dir' does not exist. Create it? (y/n): " choice
+    if [ "$choice" == "y" ]; then
+        mkdir -p "$dir"
+    else
+        echo "Exiting script."
+        exit 1
+    fi
+}
+
+# Process command line options
+while getopts ":s:d:" opt; do
+    case $opt in
+        s)
+            source_dir="$OPTARG"
+            ;;
+        d)
+            destination_dir="$OPTARG"
+            move_files=true
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG"
+            print_usage
+            exit 1
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument."
+            print_usage
+            exit 1
+            ;;
+    esac
+done
+
+# Check if source directory is provided
+if [ -z "$source_dir" ]; then
+    echo "Error: Source directory not provided."
+    print_usage
+    exit 1
 fi
 
 # Validate source directory
 if [ ! -d "$source_dir" ]; then
     echo "Error: Source directory '$source_dir' not found."
     exit 1
+fi
+
+# Validate destination directory if specified
+if [ "$move_files" = true ]; then
+    if [ -z "$destination_dir" ]; then
+        echo "Error: Destination directory not provided."
+        print_usage
+        exit 1
+    elif [ ! -d "$destination_dir" ]; then
+        prompt_create_directory "$destination_dir"
+    fi
 fi
 
 # Log file directory
@@ -38,6 +100,13 @@ current_datetime=$(date +'%Y%m%d_%H%M%S')
 main_log="$log_dir/main_log_$current_datetime.txt"
 error_log="$log_dir/error_logs_$current_datetime.txt"
 
+# Write parameters to log files
+echo "Script Parameters:" >> "$main_log"
+echo "Timestamp: $(date +'%Y-%m-%d %H:%M:%S')" >> "$main_log"
+echo "Source Directory: $source_dir" >> "$main_log"
+echo "Destination Directory: $destination_dir" >> "$main_log"
+echo "Move Files: $move_files" >> "$main_log"
+
 # Arrays of allowed file extensions (case-insensitive)
 allowed_picture_extensions=("heic" "jpg" "jpeg" "png" "gif")
 allowed_av_extensions=("mov" "avi" "mp4" "mts" "mpg" "3gp")
@@ -50,15 +119,15 @@ rename_file_with_prefix() {
     local prefix="$4"
     
     if [[ -n "${new_name// }" ]]; then
-        local new_path="$source_dir/${prefix}${new_name}${extension}"  # Include extension
+        local new_path="${destination_dir:-$source_dir}/${prefix}${new_name}${extension}"  # Include extension
         
         # If a file with the new name already exists, add a sequence number prefix
         if [ -e "$new_path" ]; then
             local sequence_number=1
-            while [ -e "${source_dir}/${prefix}${new_name}_$(printf '%04d' "$sequence_number")${extension}" ]; do
+            while [ -e "${destination_dir:-$source_dir}/${prefix}${new_name}_$(printf '%04d' "$sequence_number")${extension}" ]; do
                 sequence_number=$((sequence_number + 1))
             done
-            new_path="${source_dir}/${prefix}${new_name}_$(printf '%04d' "$sequence_number")${extension}"
+            new_path="${destination_dir:-$source_dir}/${prefix}${new_name}_$(printf '%04d' "$sequence_number")${extension}"
         fi
         
         mv "$old_name" "$new_path"

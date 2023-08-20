@@ -6,6 +6,27 @@ Tushar Sharma
 
 ## Version History
 
+### 3.0
+- files moved into destination location under year-wise sub directories followed by month in yyyy/MM_MMM format
+
+    #### Parameters
+    -s source_folder [-d destination_folder] [-w (yes|no)]
+
+    #### Usage
+    ```sh
+    ./rename_media_clutter_v.3.0.sh -s source_folder [-d destination_folder] [-w (yes|no)]
+    
+    Options:
+    -s     Specify the source folder containing media files.
+    -d     Specify a destination folder to move renamed files.
+    -w     Show a warning prompt before proceeding (default: yes).
+    ```
+
+    #### Example
+        WARNING: This script will rename and potentially move files. Do you want to proceed? (y/n): 
+        
+        2020-12-15 05.06.07.jpg -> 2020\12_Dec\P_20201215_050607.jpg
+
 ### 2.1
 - added warning message in the beginning of script run
 - progress bar shown in percentage of files processed

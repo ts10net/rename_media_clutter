@@ -1,10 +1,19 @@
 # rename_media_clutter
-This script renames media files in a given directory based on the creation date and time in their file name, and adds prefixes "P_" for pictures and "V_" for audio/video files for easy identification.
+This script renames media files in a given directory based on the creation date and time in their file name, and adds prefixes "P_" for pictures and "V_" for audio/video files for easy identification. It can also move files to a destination folder.
 
 ## Author
 Tushar Sharma
 
 ## Version History
+
+### 2.0
+- added source and destination directories as input parameters
+- included headers on main log
+
+    #### Usage
+    ```sh
+    ./rename_media_clutter_v.2.0 -s ~/Pictures/Summer -d ~/Pictures/Organized
+    ```
 
 ### 1.0
 - initial version to rename media files in a given directory
@@ -24,3 +33,4 @@ Tushar Sharma
     ```sh
     ./rename_media_clutter_v.1.0 ~/Pictures/Summer
     ```
+

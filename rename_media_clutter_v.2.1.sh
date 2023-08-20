@@ -1,33 +1,35 @@
 #!/bin/bash
 
 ################################################################################
-# Title: rename_media_clutter_v.2.0.sh
-# Version: 2.0
+# Title: rename_media_clutter_v.2.1.sh
+# Version: 2.1
 # Description: This script renames media files in a directory based on their
 #   creation date and time, and adds prefixes "P_" for pictures and "V_" for
 #   audio/video files. It can also move files to a destination folder.
 #
-# Parameters: -s source_folder [-d destination_folder]
+# Parameters: -s source_folder [-d destination_folder] [-w (yes|no)]
 #
 # Developer: Tushar Sharma
-# Last Updated: 16-AUG-2023
+# Last Updated: 17-AUG-2023
 #
 # Change Notes: 
-# - added source and destination directories as input parameters
-# - included headers on main log
+# - added warning message in the beginning of script run
+# - progress bar shown in percentage of files processed
 ################################################################################
 
 # Default values
 source_dir=""
 destination_dir=""
 move_files=false
+show_warning=true
 
 # Function to print script usage
 print_usage() {
-    echo "Usage: $0 -s source_folder [-d destination_folder]"
+    echo "Usage: $0 -s source_folder [-d destination_folder] [-w (yes|no)]"
     echo "Options:"
-    echo "  -s   Specify the source folder containing media files."
-    echo "  -d   Specify a destination folder to move renamed files."
+    echo "  -s     Specify the source folder containing media files."
+    echo "  -d     Specify a destination folder to move renamed files."
+    echo "  -w     Show a warning prompt before proceeding (default: yes)."
 }
 
 # Function to prompt user to create a directory
@@ -43,7 +45,7 @@ prompt_create_directory() {
 }
 
 # Process command line options
-while getopts ":s:d:" opt; do
+while getopts ":s:d:w:" opt; do
     case $opt in
         s)
             source_dir="$OPTARG"
@@ -51,6 +53,11 @@ while getopts ":s:d:" opt; do
         d)
             destination_dir="$OPTARG"
             move_files=true
+            ;;
+        w)
+            if [ "$OPTARG" == "no" ]; then
+                show_warning=false
+            fi
             ;;
         \?)
             echo "Invalid option: -$OPTARG"
@@ -64,6 +71,15 @@ while getopts ":s:d:" opt; do
             ;;
     esac
 done
+
+# Show warning prompt if enabled
+if [ "$show_warning" = true ]; then
+    read -p "WARNING: This script will rename and potentially move files. Do you want to proceed? (y/n): " choice
+    if [ "$choice" != "y" ]; then
+        echo "Exiting script."
+        exit 0
+    fi
+fi
 
 # Check if source directory is provided
 if [ -z "$source_dir" ]; then
@@ -106,6 +122,7 @@ echo "Timestamp: $(date +'%Y-%m-%d %H:%M:%S')" >> "$main_log"
 echo "Source Directory: $source_dir" >> "$main_log"
 echo "Destination Directory: $destination_dir" >> "$main_log"
 echo "Move Files: $move_files" >> "$main_log"
+echo "Show Warning: $show_warning" >> "$main_log"
 
 # Arrays of allowed file extensions (case-insensitive)
 allowed_picture_extensions=("heic" "jpg" "jpeg" "png" "gif")
@@ -164,6 +181,53 @@ process_file() {
     fi
 }
 
+# Function to update the progress bar
+update_progress() {
+    local current=$1
+    local total=$2
+    local width=50  # Width of the progress bar
+
+    # Calculate the percentage
+    percentage=$((current * 100 / total))
+
+    # Calculate the number of characters to fill
+    num_chars=$((current * width / total))
+    
+    # Create the progress bar string
+    bar="["
+    for ((i = 0; i < width; i++)); do
+        if [ $i -lt $num_chars ]; then
+            bar+="="
+        else
+            bar+=" "
+        fi
+    done
+    bar+="]"
+
+    # Print the progress bar and percentage
+    printf "\r%s %d%%" "$bar" "$percentage"
+}
+
+# Function to process media files
+process_media_files() {
+    # Count the number of files in the source directory
+    total_files=$(find "$source_dir" -maxdepth 1 -type f | wc -l)
+    current_file=0
+
+    for file in "$source_dir"/*; do
+        if [ -f "$file" ]; then
+            process_media_file "$file"
+
+            # Update the progress bar
+            current_file=$((current_file + 1))
+            update_progress "$current_file" "$total_files"
+        fi
+    done
+
+    # Print a newline after the progress bar is complete
+    echo
+}
+
 # Function to process a media file
 process_media_file() {
     local file="$1"
@@ -182,9 +246,6 @@ process_media_file() {
     fi
 }
 
-# Main script
-for file in "$source_dir"/*; do
-    if [ -f "$file" ]; then
-        process_media_file "$file"
-    fi
-done
+# Call the main function
+process_media_files
+

@@ -6,13 +6,33 @@ Tushar Sharma
 
 ## Version History
 
+### 2.1
+- added warning message in the beginning of script run
+- progress bar shown in percentage of files processed
+
+    #### Parameters
+    -s source_folder [-d destination_folder] [-w (yes|no)]
+
+    #### Usage
+    ```sh
+    ./rename_media_clutter_v.2.1.sh -s source_folder [-d destination_folder] [-w (yes|no)]
+    
+    Options:
+    -s     Specify the source folder containing media files.
+    -d     Specify a destination folder to move renamed files.
+    -w     Show a warning prompt before proceeding (default: yes).
+    ```
+
+    #### Example
+        WARNING: This script will rename and potentially move files. Do you want to proceed? (y/n): 
+
 ### 2.0
 - added source and destination directories as input parameters
 - included headers on main log
 
     #### Usage
     ```sh
-    ./rename_media_clutter_v.2.0 -s ~/Pictures/Summer -d ~/Pictures/Organized
+    ./rename_media_clutter_v.2.1 -s ~/Pictures/Summer -d ~/Pictures/Organized
     ```
 
 ### 1.0

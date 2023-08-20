@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ################################################################################
-# Title: rename_media_clutter_v.2.1.sh
-# Version: 2.1
+# Title: rename_media_clutter_v.3.0.sh
+# Version: 3.0
 # Description: This script renames media files in a directory based on their
 #   creation date and time, and adds prefixes "P_" for pictures and "V_" for
 #   audio/video files. It can also move files to a destination folder.
@@ -10,11 +10,11 @@
 # Parameters: -s source_folder [-d destination_folder] [-w (yes|no)]
 #
 # Developer: Tushar Sharma
-# Last Updated: 17-AUG-2023
+# Last Updated: 19-AUG-2023
 #
 # Change Notes: 
-# - added warning message in the beginning of script run
-# - progress bar shown in percentage of files processed
+# - files moved into destination location under year-wise sub directories  
+#   followed by month in yyyy/MM_MMM format
 ################################################################################
 
 # Default values
@@ -128,7 +128,7 @@ echo "Show Warning: $show_warning" >> "$main_log"
 allowed_picture_extensions=("heic" "jpg" "jpeg" "png" "gif")
 allowed_av_extensions=("mov" "avi" "mp4" "mts" "mpg" "3gp")
 
-# Function to rename a file with prefixed name
+# Function to rename a file with prefixed name and move to subdirectory
 rename_file_with_prefix() {
     local old_name="$1"
     local new_name="$2"
@@ -136,17 +136,22 @@ rename_file_with_prefix() {
     local prefix="$4"
     
     if [[ -n "${new_name// }" ]]; then
-        local new_path="${destination_dir:-$source_dir}/${prefix}${new_name}${extension}"  # Include extension
+        if [ -z "$destination_dir" ]; then
+            destination_dir="$source_dir"
+        fi
+        local new_subdir=$(date -d "${new_name:0:8}" +'%Y/%m_%b')
+        local new_path="${destination_dir}/${new_subdir}/${prefix}${new_name}${extension}"  # Include extension
         
-        # If a file with the new name already exists, add a sequence number prefix
+        # If a file with the new path already exists, add a sequence number prefix
         if [ -e "$new_path" ]; then
             local sequence_number=1
-            while [ -e "${destination_dir:-$source_dir}/${prefix}${new_name}_$(printf '%04d' "$sequence_number")${extension}" ]; do
+            while [ -e "${destination_dir}/${new_subdir}/${prefix}${new_name}_$(printf '%04d' "$sequence_number")${extension}" ]; do
                 sequence_number=$((sequence_number + 1))
             done
-            new_path="${destination_dir:-$source_dir}/${prefix}${new_name}_$(printf '%04d' "$sequence_number")${extension}"
+            new_path="${destination_dir}/${new_subdir}/${prefix}${new_name}_$(printf '%04d' "$sequence_number")${extension}"
         fi
         
+        mkdir -p "$(dirname "$new_path")"  # Create subdirectory
         mv "$old_name" "$new_path"
         echo "$(date +'%Y-%m-%d %H:%M:%S') - Renamed '$old_name' to '$(basename "$new_path")'" >> "$main_log"
     else
@@ -212,6 +217,7 @@ update_progress() {
 process_media_files() {
     # Count the number of files in the source directory
     total_files=$(find "$source_dir" -maxdepth 1 -type f | wc -l)
+    echo "Total files: $total_files"
     current_file=0
 
     for file in "$source_dir"/*; do

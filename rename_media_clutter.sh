@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ################################################################################
-# Title: rename_media_clutter_v.3.0.sh
-# Version: 3.0
+# Title: rename_media_clutter.sh
+# Version: 3.1
 # Description: This script renames media files in a directory based on their
 #   creation date and time, and adds prefixes "P_" for pictures and "V_" for
 #   audio/video files. It can also move files to a destination folder.
@@ -10,7 +10,7 @@
 # Parameters: -s source_folder [-d destination_folder] [-w (yes|no)]
 #
 # Developer: Tushar Sharma
-# Last Updated: 19-AUG-2023
+# Last Updated: 20-AUG-2023
 #
 # Change Notes: 
 # - files moved into destination location under year-wise sub directories  

@@ -6,6 +6,22 @@ Tushar Sharma
 
 ## Version History
 
+### 3.1
+- removed version number from the script name
+
+    #### Parameters
+    -s source_folder [-d destination_folder] [-w (yes|no)]
+
+    #### Usage
+    ```sh
+    ./rename_media_clutter.sh -s source_folder [-d destination_folder] [-w (yes|no)]
+    
+    Options:
+    -s     Specify the source folder containing media files.
+    -d     Specify a destination folder to move renamed files.
+    -w     Show a warning prompt before proceeding (default: yes).
+    ```
+
 ### 3.0
 - files moved into destination location under year-wise sub directories followed by month in yyyy/MM_MMM format
 

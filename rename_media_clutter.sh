@@ -2,7 +2,7 @@
 
 ################################################################################
 # Title: rename_media_clutter.sh
-# Version: 3.1
+# Version: 3.2
 # Description: This script renames media files in a directory based on their
 #   creation date and time, and adds prefixes "P_" for pictures and "V_" for
 #   audio/video files. It can also move files to a destination folder.
@@ -10,7 +10,7 @@
 # Parameters: -s source_folder [-d destination_folder] [-w (yes|no)]
 #
 # Developer: Tushar Sharma
-# Last Updated: 20-AUG-2023
+# Last Updated: 21-AUG-2023
 #
 # Change Notes: 
 # - files moved into destination location under year-wise sub directories  
@@ -23,13 +23,20 @@ destination_dir=""
 move_files=false
 show_warning=true
 
+# Define the list of datetime patterns
+datetime_patterns=("yyyy-MM-dd HH.mm.ss" "yyyy-MM-dd HH:mm:ss" "yyyy/MM/dd HH:mm:ss" "MM/dd/yyyy HH:mm:ss")
+
+# Default value for datetime pattern (if not provided by user)
+selected_datetime_pattern="yyyy-MM-dd HH.mm.ss"
+
 # Function to print script usage
 print_usage() {
-    echo "Usage: $0 -s source_folder [-d destination_folder] [-w (yes|no)]"
+    echo "Usage: $0 -s source_folder [-d destination_folder] [-w (yes|no)] [-i datetime_pattern]"
     echo "Options:"
     echo "  -s     Specify the source folder containing media files."
     echo "  -d     Specify a destination folder to move renamed files."
     echo "  -w     Show a warning prompt before proceeding (default: yes)."
+    echo "  -i     Specify a datetime pattern to extract (default: yyyy-MM-dd HH.mm.ss)."
 }
 
 # Function to prompt user to create a directory
@@ -44,33 +51,42 @@ prompt_create_directory() {
     fi
 }
 
+# Function to process command line options
+process_command_line_options() {
+    while getopts ":s:d:w:" opt; do
+        case $opt in
+            s)
+                source_dir="$OPTARG"
+                ;;
+            d)
+                destination_dir="$OPTARG"
+                move_files=true
+                ;;
+            w)
+                if [ "$OPTARG" == "no" ]; then
+                    show_warning=false
+                fi
+                ;;
+            i)
+                    selected_datetime_pattern="$OPTARG"
+                    ;;
+            \?)
+                echo "Invalid option: -$OPTARG"
+                print_usage
+                exit 1
+                ;;
+            :)
+                echo "Option -$OPTARG requires an argument."
+                print_usage
+                exit 1
+                ;;
+        esac
+    done
+}
+
 # Process command line options
-while getopts ":s:d:w:" opt; do
-    case $opt in
-        s)
-            source_dir="$OPTARG"
-            ;;
-        d)
-            destination_dir="$OPTARG"
-            move_files=true
-            ;;
-        w)
-            if [ "$OPTARG" == "no" ]; then
-                show_warning=false
-            fi
-            ;;
-        \?)
-            echo "Invalid option: -$OPTARG"
-            print_usage
-            exit 1
-            ;;
-        :)
-            echo "Option -$OPTARG requires an argument."
-            print_usage
-            exit 1
-            ;;
-    esac
-done
+process_command_line_options "$@"
+
 
 # Show warning prompt if enabled
 if [ "$show_warning" = true ]; then
@@ -128,6 +144,13 @@ echo "Show Warning: $show_warning" >> "$main_log"
 allowed_picture_extensions=("heic" "jpg" "jpeg" "png" "gif")
 allowed_av_extensions=("mov" "avi" "mp4" "mts" "mpg" "3gp")
 
+# Function to log errors
+log_error() {
+    local filename="$1"
+    local error_message="$2"
+    echo "$(date +'%Y-%m-%d %H:%M:%S') - Error for '$filename': $error_message" >> "$error_log"
+}
+
 # Function to rename a file with prefixed name and move to subdirectory
 rename_file_with_prefix() {
     local old_name="$1"
@@ -159,12 +182,24 @@ rename_file_with_prefix() {
     fi
 }
 
-# Function to log errors
-log_error() {
-    local filename="$1"
-    local error_message="$2"
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - Error for '$filename': $error_message" >> "$error_log"
+# Function to extract datetime using the selected pattern
+extract_datetime() {
+    local datetime=""
+    local input_datetime=$1 # old_name
+    
+    # Iterate through datetime patterns to find a match
+    for pattern in "${datetime_patterns[@]}"; do
+        if [[ $input_datetime =~ $pattern ]]; then
+            # Convert the matched datetime in 'BASH_REMATCH' into the desired format
+            datetime=$(date -d "${BASH_REMATCH[0]}" +'%Y-%m-%d %H:%M:%S')
+            break
+        fi
+    done
+    
+    echo "$datetime"
 }
+
+
 
 # Function to process a media file (common logic for both picture and audio/video)
 process_file() {
@@ -173,7 +208,7 @@ process_file() {
     local extension="$3"
     local prefix="$4"
     
-    local datetime=$(echo "$old_name" | grep -oP '\d{4}-\d{2}-\d{2} \d{2}.\d{2}.\d{2}')
+    local datetime=$(extract_datetime "$old_name")
     
     if [ -n "$datetime" ]; then
         # Replace dots with colons in the datetime string
@@ -213,6 +248,24 @@ update_progress() {
     printf "\r%s %d%%" "$bar" "$percentage"
 }
 
+# Function to process a media file
+process_media_file() {
+    local file="$1"
+    local old_name=$(basename "$file")
+    local extension=".${old_name##*.}"  # Include dot before extension
+    
+    # Convert extension to lowercase for case-insensitive comparison
+    extension_lower=$(echo "$extension" | tr '[:upper:]' '[:lower:]')
+    
+    if [[ " ${allowed_picture_extensions[@]/#/.} " =~ " $extension_lower " ]]; then
+        process_file "$file" "$old_name" "$extension_lower" "P_"
+    elif [[ " ${allowed_av_extensions[@]/#/.} " =~ " $extension_lower " ]]; then
+        process_file "$file" "$old_name" "$extension_lower" "V_"
+    else
+        log_error "$old_name" "Skipped due to unsupported extension '$extension_lower'"
+    fi
+}
+
 # Function to process media files
 process_media_files() {
     # Count the number of files in the source directory
@@ -232,24 +285,6 @@ process_media_files() {
 
     # Print a newline after the progress bar is complete
     echo
-}
-
-# Function to process a media file
-process_media_file() {
-    local file="$1"
-    local old_name=$(basename "$file")
-    local extension=".${old_name##*.}"  # Include dot before extension
-    
-    # Convert extension to lowercase for case-insensitive comparison
-    extension_lower=$(echo "$extension" | tr '[:upper:]' '[:lower:]')
-    
-    if [[ " ${allowed_picture_extensions[@]/#/.} " =~ " $extension_lower " ]]; then
-        process_file "$file" "$old_name" "$extension_lower" "P_"
-    elif [[ " ${allowed_av_extensions[@]/#/.} " =~ " $extension_lower " ]]; then
-        process_file "$file" "$old_name" "$extension_lower" "V_"
-    else
-        log_error "$old_name" "Skipped due to unsupported extension '$extension_lower'"
-    fi
 }
 
 # Call the main function

@@ -24,7 +24,15 @@ move_files=false
 show_warning=true
 
 # Define the list of datetime patterns
-datetime_patterns=("yyyy-MM-dd HH.mm.ss" "yyyy-MM-dd HH:mm:ss" "yyyy/MM/dd HH:mm:ss" "MM/dd/yyyy HH:mm:ss")
+declare -A datetime_patterns
+datetime_patterns["yyyy-MM-dd HH:mm:ss"]="([12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]) ([0-9]{2}:[0-9]{2}:[0-9]{2}))"
+datetime_patterns["yyyy-MM-ddTHH:mm:ss"]="([12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([0-9]{2}:[0-9]{2}:[0-9]{2}))"
+datetime_patterns["yyyy-MM-dd HH.mm.ss"]="([12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]) ([0-9]{2}\.[0-9]{2}\.[0-9]{2}))"
+datetime_patterns["yyyyMMdd_HHmmss"]="([12]\d{3}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])_([0-9]{2}[0-9]{2}[0-9]{2}))"
+datetime_patterns["yyyyMMddTHHmmss"]="([12]\d{3}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])T([0-9]{2}[0-9]{2}[0-9]{2}))"
+datetime_patterns["yyyy.MM.dd HH:mm:ss"]="([12]\d{3}\.[0-9]{2}\.[0-9]{2} ([0-9]{2}:[0-9]{2}:[0-9]{2}))"
+datetime_patterns["MM/dd/yyyy HH:mm:ss"]="(0[1-9]|1[0-2])/(0[1-9]|[12]\d|3[01])/([12]\d{3}) ([0-9]{2}:[0-9]{2}:[0-9]{2})"
+
 
 # Default value for datetime pattern (if not provided by user)
 selected_datetime_pattern="yyyy-MM-dd HH.mm.ss"
@@ -182,24 +190,33 @@ rename_file_with_prefix() {
     fi
 }
 
+# Function to extract matching string from paragraph using a given pattern
+extract_matching_string() {
+    local paragraph="$1"
+    local pattern="$2"
+    
+    # Use grep to extract matching string
+    matching_string=$(echo "$paragraph" | grep -oP "$pattern")
+    
+    echo "$matching_string"
+}
+
 # Function to extract datetime using the selected pattern
 extract_datetime() {
     local datetime=""
-    local input_datetime=$1 # old_name
+    local input_datetime=$1
     
     # Iterate through datetime patterns to find a match
-    for pattern in "${datetime_patterns[@]}"; do
-        if [[ $input_datetime =~ $pattern ]]; then
-            # Convert the matched datetime in 'BASH_REMATCH' into the desired format
-            datetime=$(date -d "${BASH_REMATCH[0]}" +'%Y-%m-%d %H:%M:%S')
+    for pattern in "${!datetime_patterns[@]}"; do
+        matching_string=$(extract_matching_string "$input_datetime" "${datetime_patterns[$pattern]}")
+        if [ -n "$matching_string" ]; then
+            datetime=$(date -d "$matching_string" +$pattern) #'%Y-%m-%d %H:%M:%S'
             break
         fi
     done
     
     echo "$datetime"
 }
-
-
 
 # Function to process a media file (common logic for both picture and audio/video)
 process_file() {

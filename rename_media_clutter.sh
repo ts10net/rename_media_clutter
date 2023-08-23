@@ -3,14 +3,17 @@
 ################################################################################
 # Title: rename_media_clutter.sh
 # Version: 3.2
-# Description: This script renames media files in a directory based on their
-#   creation date and time, and adds prefixes "P_" for pictures and "V_" for
-#   audio/video files. It can also move files to a destination folder.
+# Description: This script renames media files with creation date & time and  
+#   move them to given destination folder under year/month wise folder structure.
+#   It tries to match/detect date patterns in input file names and if found it 
+#   considers that as the creation datetime for that file.
+#   A file is renamed in %Y%m%d_%H%M%S format and it adds prefixes "P_" for 
+#   pictures and "V_" for audio/video files. 
 #
 # Parameters: -s source_folder [-d destination_folder] [-w (yes|no)]
 #
 # Developer: Tushar Sharma
-# Last Updated: 21-AUG-2023
+# Last Updated: 22-AUG-2023
 #
 # Change Notes: 
 # - files moved into destination location under year-wise sub directories  
@@ -33,9 +36,18 @@ datetime_patterns["yyyyMMddTHHmmss"]="([12]\d{3}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[
 datetime_patterns["yyyy.MM.dd HH:mm:ss"]="([12]\d{3}\.[0-9]{2}\.[0-9]{2} ([0-9]{2}:[0-9]{2}:[0-9]{2}))"
 datetime_patterns["MM/dd/yyyy HH:mm:ss"]="(0[1-9]|1[0-2])/(0[1-9]|[12]\d|3[01])/([12]\d{3}) ([0-9]{2}:[0-9]{2}:[0-9]{2})"
 
+declare -A datetime_formats
+datetime_formats["yyyy-MM-dd HH:mm:ss"]="s/([0-9]{4})-([0-9]{2})-([0-9]{2})\ ([0-9]{2}):([0-9]{2}):([0-9]{2})/\1-\2-\3 \4:\5:\6/"
+datetime_formats["yyyy-MM-ddTHH:mm:ss"]="s/([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})/\1-\2-\3 \4:\5:\6/"
+datetime_formats["yyyy-MM-dd HH.mm.ss"]="s/([0-9]{4})-([0-9]{2})-([0-9]{2})\ ([0-9]{2})\.([0-9]{2})\.([0-9]{2})/\1-\2-\3 \4:\5:\6/"
+datetime_formats["yyyyMMdd_HHmmss"]="s/([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]{2})([0-9]{2})([0-9]{2})/\1-\2-\3 \4:\5:\6/"
+datetime_formats["yyyyMMddTHHmmss"]="s/([0-9]{4})([0-9]{2})([0-9]{2})T([0-9]{2})([0-9]{2})([0-9]{2})/\1-\2-\3 \4:\5:\6/"
+datetime_formats["yyyy.MM.dd HH:mm:ss"]="s/([0-9]{4})\.([0-9]{2})\.([0-9]{2})\ ([0-9]{2}):([0-9]{2}):([0-9]{2})/\1-\2-\3 \4:\5:\6/"
+datetime_formats["MM/dd/yyyy HH:mm:ss"]="s/([0-9]{2})\/([0-9]{2})\/([0-9]{4})\ ([0-9]{2}):([0-9]{2}):([0-9]{2})/\3-\1-\2 \4:\5:\6/"
+
 
 # Default value for datetime pattern (if not provided by user)
-selected_datetime_pattern="yyyy-MM-dd HH.mm.ss"
+selected_datetime_pattern=""
 
 # Function to print script usage
 print_usage() {
@@ -44,7 +56,7 @@ print_usage() {
     echo "  -s     Specify the source folder containing media files."
     echo "  -d     Specify a destination folder to move renamed files."
     echo "  -w     Show a warning prompt before proceeding (default: yes)."
-    echo "  -i     Specify a datetime pattern to extract (default: yyyy-MM-dd HH.mm.ss)."
+    echo "  -i     Specify a datetime pattern to extract otherwise runs pattern matching algorithm if input pattern not provided"
 }
 
 # Function to prompt user to create a directory
@@ -61,7 +73,7 @@ prompt_create_directory() {
 
 # Function to process command line options
 process_command_line_options() {
-    while getopts ":s:d:w:" opt; do
+    while getopts ":s:d:w:i:" opt; do
         case $opt in
             s)
                 source_dir="$OPTARG"
@@ -210,7 +222,9 @@ extract_datetime() {
     for pattern in "${!datetime_patterns[@]}"; do
         matching_string=$(extract_matching_string "$input_datetime" "${datetime_patterns[$pattern]}")
         if [ -n "$matching_string" ]; then
-            datetime=$(date -d "$matching_string" +$pattern) #'%Y-%m-%d %H:%M:%S'
+            # Transform matching pattern strings into specific date format
+            formatted_datetime=$(echo "$matching_string" | sed -E "${datetime_formats[$pattern]}")
+            datetime=$(date -d "$formatted_datetime" +"%Y-%m-%d %H:%M:%S")
             break
         fi
     done

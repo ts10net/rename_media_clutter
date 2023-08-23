@@ -218,16 +218,24 @@ extract_datetime() {
     local datetime=""
     local input_datetime=$1
     
-    # Iterate through datetime patterns to find a match
-    for pattern in "${!datetime_patterns[@]}"; do
-        matching_string=$(extract_matching_string "$input_datetime" "${datetime_patterns[$pattern]}")
+    if [ -n "$selected_datetime_pattern" ]; then
+        pattern="${datetime_patterns[$selected_datetime_pattern]}"
+        matching_string=$(extract_matching_string "$input_datetime" "$pattern")
+        
         if [ -n "$matching_string" ]; then
-            # Transform matching pattern strings into specific date format
-            formatted_datetime=$(echo "$matching_string" | sed -E "${datetime_formats[$pattern]}")
+            formatted_datetime=$(echo "$matching_string" | sed -E "${datetime_formats[$selected_datetime_pattern]}")
             datetime=$(date -d "$formatted_datetime" +"%Y-%m-%d %H:%M:%S")
-            break
         fi
-    done
+    else
+        for pattern in "${!datetime_patterns[@]}"; do
+            matching_string=$(extract_matching_string "$input_datetime" "${datetime_patterns[$pattern]}")
+            if [ -n "$matching_string" ]; then
+                formatted_datetime=$(echo "$matching_string" | sed -E "${datetime_formats[$pattern]}")
+                datetime=$(date -d "$formatted_datetime" +"%Y-%m-%d %H:%M:%S")
+                break
+            fi
+        done
+    fi
     
     echo "$datetime"
 }

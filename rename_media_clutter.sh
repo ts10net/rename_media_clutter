@@ -327,7 +327,7 @@ process_media_files() {
     start_time=$(date +%s)  # Record the start time
     # Count the number of files in the source directory
     total_files=$(find "$source_dir" -maxdepth 1 -type f | wc -l)
-    echo "Total files: $total_files"
+    # echo "Total files: $total_files"
     current_file=0
 
     for file in "$source_dir"/*; do

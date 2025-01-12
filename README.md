@@ -30,6 +30,10 @@ Tushar Sharma
     -i     Specify a datetime pattern to extract otherwise runs pattern matching algorithm if input pattern not provided.
     ```
 
+    #### Example
+        WARNING: This script will rename and potentially move files. Do you want to proceed? (y/n): y
+        [#.................................................] 2% (280/12566 processed, 12286 remaining) [Elapsed: 00:18:02, Remaining: 10:15:20]
+
 ### 3.1
 - removed version number from the script name
 

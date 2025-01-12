@@ -13,11 +13,8 @@
 # Parameters: -s source_folder [-d destination_folder] [-w (yes|no)]
 #
 # Developer: Tushar Sharma
-# Last Updated: 22-AUG-2023
+# Last Updated: 11-JAN-2025
 #
-# Change Notes: 
-# - files moved into destination location under year-wise sub directories  
-#   followed by month in yyyy/MM_MMM format
 ################################################################################
 
 # Default values
@@ -56,7 +53,7 @@ print_usage() {
     echo "  -s     Specify the source folder containing media files."
     echo "  -d     Specify a destination folder to move renamed files."
     echo "  -w     Show a warning prompt before proceeding (default: yes)."
-    echo "  -i     Specify a datetime pattern to extract otherwise runs pattern matching algorithm if input pattern not provided"
+    echo "  -i     Specify a datetime pattern to extract otherwise runs pattern matching algorithm if input pattern not provided."
 }
 
 # Function to prompt user to create a directory
@@ -265,6 +262,7 @@ update_progress() {
     local current=$1
     local total=$2
     local width=50  # Width of the progress bar
+    local start_time=$3
 
     # Calculate the percentage
     percentage=$((current * 100 / total))
@@ -276,15 +274,34 @@ update_progress() {
     bar="["
     for ((i = 0; i < width; i++)); do
         if [ $i -lt $num_chars ]; then
-            bar+="="
+            bar+="#"
         else
-            bar+=" "
+            bar+="."
         fi
     done
     bar+="]"
 
-    # Print the progress bar and percentage
-    printf "\r%s %d%%" "$bar" "$percentage"
+    # Calculate time elapsed
+    current_time=$(date +%s)
+    elapsed=$((current_time - start_time))
+
+    # Estimate remaining time
+    if [ $current -gt 0 ]; then
+        estimated_total_time=$((elapsed * total / current))
+        remaining_time=$((estimated_total_time - elapsed))
+    else
+        remaining_time=0
+    fi
+
+    # Convert elapsed and remaining time to H:M:S format
+    elapsed_formatted=$(printf "%02d:%02d:%02d" $((elapsed / 3600)) $((elapsed % 3600 / 60)) $((elapsed % 60)))
+    remaining_formatted=$(printf "%02d:%02d:%02d" $((remaining_time / 3600)) $((remaining_time % 3600 / 60)) $((remaining_time % 60)))
+
+    # Calculate files left to process
+    remaining=$((total - current))
+
+    # Print the progress bar, percentage, file stats, and time
+    printf "\r%s %d%% (%d/%d processed, %d remaining) [Elapsed: %s, Remaining: %s]" "$bar" "$percentage" "$current" "$total" "$remaining" "$elapsed_formatted" "$remaining_formatted"
 }
 
 # Function to process a media file
@@ -307,6 +324,7 @@ process_media_file() {
 
 # Function to process media files
 process_media_files() {
+    start_time=$(date +%s)  # Record the start time
     # Count the number of files in the source directory
     total_files=$(find "$source_dir" -maxdepth 1 -type f | wc -l)
     echo "Total files: $total_files"
@@ -318,7 +336,7 @@ process_media_files() {
 
             # Update the progress bar
             current_file=$((current_file + 1))
-            update_progress "$current_file" "$total_files"
+            update_progress "$current_file" "$total_files" "$start_time"
         fi
     done
 

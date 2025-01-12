@@ -6,6 +6,30 @@ Tushar Sharma
 
 ## Version History
 
+### 3.2
+- The progress bar has been updated to provide more detailed information:
+  - **Processed files**: Displays the number of files already processed.
+  - **Total files**: Shows the total number of files to be processed.
+  - **Remaining files**: Displays how many files are yet to be processed.
+  - **Elapsed time**: Indicates how much time has passed since the process started.
+  - **Expected remaining time**: Provides an estimate of the remaining time until completion.
+    
+    This update improves the visibility of the processing status and gives users a better understanding of the progress.
+
+    #### Parameters
+    -s source_folder [-d destination_folder] [-w (yes|no)] [-i datetime_pattern]
+
+    #### Usage
+    ```sh
+    ./rename_media_clutter.sh -s source_folder [-d destination_folder] [-w (yes|no)]
+    
+    Options:
+    -s     Specify the source folder containing media files.
+    -d     Specify a destination folder to move renamed files.
+    -w     Show a warning prompt before proceeding (default: yes).
+    -i     Specify a datetime pattern to extract otherwise runs pattern matching algorithm if input pattern not provided.
+    ```
+
 ### 3.1
 - removed version number from the script name
 
